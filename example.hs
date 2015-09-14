@@ -2,7 +2,7 @@ import Camino
 
 main = do 
     --output $ rect 70 80 90 100
-    output $ rect 20 20 200 200 
+    --output $ joinAtEnds [take 2 $ rect 20 20 200 200 , rect 20 20 200 200]
     --output $ addPaths (rect 0 0 10 10) (rect 50 50 50 50)
     --output $ close $ circle 100 103 40
-    output $ addPaths (circle 100 103 40) (rect 90 90 30 30)
+    output $ joinAtEnds [addPaths (circle 0 (-30) 10) (addPaths (circle 100 103 40) (intersperse (90,90) (30,30) 89)), take 2 $ rect 20 20 20 20, take 45 $ circle 30 20 30]

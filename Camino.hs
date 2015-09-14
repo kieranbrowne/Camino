@@ -6,8 +6,12 @@ module Camino
 , smooth
 , circle
 , rect
+, line
+, intersperse
 , output
 , addPaths
+, joinPaths
+, joinAtEnds
 ) where
 
 import Data.Fixed
@@ -35,14 +39,20 @@ smooth [] = []
 smooth p = p
 
 -- turn a list of paths into a single path
-join :: [Path] -> Path
-join (x:xs) = x 
+joinPaths :: [Path] -> Path
+joinPaths [] = error "cannot join empty list"
+joinPaths [x] = x
+joinPaths (x:xs) = x ++ joinPaths xs 
 
 -- takes a list of paths and translates their positions 
 -- so that the endpoint of the nth path aligns with the 
 -- start point of the (n+1)th path
 joinAtEnds :: [Path] -> Path
-joinAtEnds (x:xs) = x
+joinAtEnds [] = error "cannot run on an empty list"
+joinAtEnds [p] = p
+joinAtEnds (x:xs) = x ++ addPaths trans (joinAtEnds xs)
+    where diff = subCoords (last x) (head $ head xs)
+          trans = replicate (sum $ map length xs) diff 
 
 -- shapes 
 circle :: Double -> Double -> Double -> Path
@@ -55,14 +65,9 @@ circle x y r = points'
 rect :: Double -> Double -> Double -> Double -> Path
 rect x y w h = [(x,y),(x+w,y),(x+w,y+h),(x,y+h),(x,y)]
 
+line :: Double -> Double -> Double -> Double -> Path
+line x1 y1 x2 y2 = [(x1,y1),(x2,y2)]
 
-line :: Coord -> Coord -> Double -> Path
-line a b n = [(ax+ix*i,ay+iy*i) | i <- [0..n]]
-    where (ax,ay) = a
-          (bx,by) = b
-          (dx,dy) = (bx-ax,by-ay) 
-          (ix,iy) = (dx/n,dy/n)
-          
 
 -- coord maker
 coord :: Double -> Double -> Coord
@@ -74,6 +79,15 @@ output (p:ps) =
     mapM_ putStrLn ([ show x ++" "++ show y ++" 0" | (x,y) <- [p] ] 
     ++ [ show x ++" "++ show y ++" 1" | (x,y) <- ps ] )
 
+addCoords :: Coord -> Coord -> Coord
+addCoords a b = (ax+bx,ay+by)
+   where (ax,ay) = a 
+         (bx,by) = b
+         
+subCoords :: Coord -> Coord -> Coord
+subCoords a b = (ax-bx,ay-by)
+   where (ax,ay) = a 
+         (bx,by) = b
 
 -- add the values of two paths together
 addPaths :: Path -> Path -> Path
@@ -81,7 +95,7 @@ addPaths a b = [(ax+bx,ay+by) | ((ax,ay),(bx,by)) <- c ]
     where longest = max (length a) (length b)
           a' = topup a longest
           b' = topup b longest
-          c = zip a' b'
+          c  = zip a' b'
 
 -- extend p list of coords to n length with (0,0)s
 topup :: Path -> Int -> Path
@@ -89,13 +103,21 @@ topup p n
     | length p >= n = p 
     | otherwise = p ++ replicate (n - length p) (0,0)
 
+-- evenly disperse n points between two coords
+intersperse :: Coord -> Coord -> Double -> Path
+intersperse a b n = [(ax+ix*i,ay+iy*i) | i <- [0..n]]
+    where (ax,ay) = a
+          (bx,by) = b
+          (dx,dy) = (bx-ax,by-ay) 
+          (ix,iy) = (dx/n,dy/n)
+          
 -- evenly fill gaps in p path to n points of detail
 detail :: Path -> Double -> Path
 detail p n = p
-    where dists = pathDists p 
+    where dists    = pathDists p 
           pathDist = sum dists
-          bits = pathDist / n
-          points = n
+          bits     = pathDist / n
+          points   = n
  
 -- distance between two coords
 dist :: Coord -> Coord -> Double
@@ -113,3 +135,4 @@ pathDists p = [ dist a b | (a,b) <- pathPairs p ]
 -- distance of an entire path 
 pathDist :: Path -> Double
 pathDist p = sum $ pathDists p 
+
