@@ -11,7 +11,9 @@ module Camino
 , output
 , addPaths
 , joinPaths
+, flowPaths
 , joinAtEnds
+, rotatePath
 ) where
 
 import Data.Fixed
@@ -40,19 +42,32 @@ smooth p = p
 
 -- turn a list of paths into a single path
 joinPaths :: [Path] -> Path
-joinPaths [] = error "cannot join empty list"
-joinPaths [x] = x
-joinPaths (x:xs) = x ++ joinPaths xs 
+joinPaths [] = []
+joinPaths [p] = p
+joinPaths (p:ps) = p ++ joinPaths ps 
 
 -- takes a list of paths and translates their positions 
 -- so that the endpoint of the nth path aligns with the 
 -- start point of the (n+1)th path
 joinAtEnds :: [Path] -> Path
-joinAtEnds [] = error "cannot run on an empty list"
+joinAtEnds [] = []
 joinAtEnds [p] = p
-joinAtEnds (x:xs) = x ++ addPaths trans (joinAtEnds xs)
-    where diff = subCoords (last x) (head $ head xs)
-          trans = replicate (sum $ map length xs) diff 
+joinAtEnds (p:ps) = p ++ addPaths trans (joinAtEnds ps)
+    where diff = subCoords (last p) (head $ head ps)
+          trans = replicate (sum $ map length ps) diff 
+
+flowPaths :: [Path] -> Path
+flowPaths [] = []
+flowPaths [p] = p
+flowPaths (p:ps) = p ++ rotatePath (flowPaths ps) θ
+    where θ = (lastAngle p) - (initialAngle $ head ps)
+
+
+rotatePath :: Path -> Double -> Path
+rotatePath [] θ = []
+rotatePath p θ = head p : [ (d*cos(a),d*sin(a)) | (a,d) <- zip angles dists ]
+    where angles = [ (θ/180*pi) + (angle (head p) coord)/180*pi | coord <- tail p ]
+          dists  = [ dist (head p) coord | coord <- tail p ]
 
 -- shapes 
 circle :: Double -> Double -> Double -> Path
@@ -97,7 +112,7 @@ addPaths a b = [(ax+bx,ay+by) | ((ax,ay),(bx,by)) <- c ]
           b' = topup b longest
           c  = zip a' b'
 
--- extend p list of coords to n length with (0,0)s
+-- extend p path to n length with (0,0)s
 topup :: Path -> Int -> Path
 topup p n 
     | length p >= n = p 
@@ -108,8 +123,8 @@ intersperse :: Coord -> Coord -> Double -> Path
 intersperse a b n = [(ax+ix*i,ay+iy*i) | i <- [0..n]]
     where (ax,ay) = a
           (bx,by) = b
-          (dx,dy) = (bx-ax,by-ay) 
-          (ix,iy) = (dx/n,dy/n)
+          (δx,δy) = (bx-ax,by-ay) 
+          (ix,iy) = (δx/n,δy/n)
           
 -- evenly fill gaps in p path to n points of detail
 detail :: Path -> Double -> Path
@@ -136,3 +151,20 @@ pathDists p = [ dist a b | (a,b) <- pathPairs p ]
 pathDist :: Path -> Double
 pathDist p = sum $ pathDists p 
 
+gradient :: Coord -> Coord -> Double
+gradient (ax,ay) (bx,by) = rise / run 
+    where rise = by-ay
+          run  = bx-ax
+angle :: Coord -> Coord -> Double
+angle (ax,ay) (bx,by)  = (atan2 rise run) * 180 / pi
+    where rise = by-ay
+          run  = bx-ax
+
+initialAngle :: Path -> Double
+initialAngle p 
+    | length p <= 1 = 0
+    | otherwise = angle (head p) (p !! 1)
+lastAngle :: Path -> Double
+lastAngle p 
+    | length p <= 1 = 0
+    | otherwise = angle (reverse p !! 1) (last p)
