@@ -12,6 +12,7 @@ module Camino
 , addPaths
 , joinPaths
 , flowPaths
+, alignEnds
 , joinAtEnds
 , rotatePath
 ) where
@@ -57,17 +58,20 @@ joinAtEnds (p:ps) = p ++ addPaths trans (joinAtEnds ps)
           trans = replicate (sum $ map length ps) diff 
 
 flowPaths :: [Path] -> Path
-flowPaths [] = []
-flowPaths [p] = p
-flowPaths (p:ps) = p ++ rotatePath (flowPaths ps) θ
-    where θ = (lastAngle p) - (initialAngle $ head ps)
+flowPaths p = joinAtEnds $ alignEnds p
 
+alignEnds :: [Path] -> [Path]
+alignEnds [] = []
+alignEnds [p] = [p]
+alignEnds (p:ps) = p : [rotatePath p θ | p <- (alignEnds ps)]
+    where θ = (lastAngle p) - (initialAngle $ head ps)
 
 rotatePath :: Path -> Double -> Path
 rotatePath [] θ = []
-rotatePath p θ = head p : [ (d*cos(a),d*sin(a)) | (a,d) <- zip angles dists ]
-    where angles = [ (θ/180*pi) + (angle (head p) coord)/180*pi | coord <- tail p ]
+rotatePath p θ = head p : [ (x+d*cos(a),y+d*sin(a)) | (a,d) <- zip angles dists ]
+    where angles = [ (θ/180*pi) + ((angle (head p) coord)/180*pi) | coord <- tail p ]
           dists  = [ dist (head p) coord | coord <- tail p ]
+          (x,y)  = head p
 
 -- shapes 
 circle :: Double -> Double -> Double -> Path
