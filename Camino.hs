@@ -147,6 +147,7 @@ dist a b = sqrt $ (bx-ax)^2 + (by-ay)^2
 -- get consecutive coord pairs on a path
 pathPairs :: Path -> [(Coord,Coord)]
 pathPairs p = zip p $ tail p
+
 -- get distances of consecutive coords on a path
 pathDists :: Path -> [Double]
 pathDists p = [ dist a b | (a,b) <- pathPairs p ] 
@@ -159,6 +160,7 @@ gradient :: Coord -> Coord -> Double
 gradient (ax,ay) (bx,by) = rise / run 
     where rise = by-ay
           run  = bx-ax
+
 angle :: Coord -> Coord -> Double
 angle (ax,ay) (bx,by)  = (atan2 rise run) * 180 / pi
     where rise = by-ay
