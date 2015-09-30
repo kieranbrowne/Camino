@@ -53,9 +53,8 @@ joinPaths (p:ps) = p ++ joinPaths ps
 joinAtEnds :: [Path] -> Path
 joinAtEnds [] = []
 joinAtEnds [p] = p
-joinAtEnds (p:ps) = p ++ addPaths trans (joinAtEnds ps)
-    where diff = subCoords (last p) (head $ head ps)
-          trans = replicate (sum $ map length ps) diff 
+joinAtEnds (p:ps) = p ++ map (addCoord diff) (joinAtEnds ps)
+    where diff = subCoord (last p) (head $ head ps)
 
 flowPaths :: [Path] -> Path
 flowPaths p = joinAtEnds $ alignEnds p
@@ -98,13 +97,13 @@ output (p:ps) =
     mapM_ putStrLn ([ show x ++" "++ show y ++" 0" | (x,y) <- [p] ] 
     ++ [ show x ++" "++ show y ++" 1" | (x,y) <- ps ] )
 
-addCoords :: Coord -> Coord -> Coord
-addCoords a b = (ax+bx,ay+by)
+addCoord :: Coord -> Coord -> Coord
+addCoord a b = (ax+bx,ay+by)
    where (ax,ay) = a 
          (bx,by) = b
          
-subCoords :: Coord -> Coord -> Coord
-subCoords a b = (ax-bx,ay-by)
+subCoord :: Coord -> Coord -> Coord
+subCoord a b = (ax-bx,ay-by)
    where (ax,ay) = a 
          (bx,by) = b
 
