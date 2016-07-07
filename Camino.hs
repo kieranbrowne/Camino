@@ -56,6 +56,8 @@ joinAtEnds [p] = p
 joinAtEnds (p:ps) = p ++ map (addCoord diff) (joinAtEnds ps)
     where diff = subCoord (last p) (head $ head ps)
 
+-- like joinAtEnds but the initial direction of each path is set by
+-- the final angle of the previous path
 flowPaths :: [Path] -> Path
 flowPaths p = joinAtEnds $ alignEnds p
 
@@ -72,7 +74,7 @@ rotatePath p θ = head p : [ (x+d*cos(a),y+d*sin(a)) | (a,d) <- zip angles dists
           dists  = [ dist (head p) coord | coord <- tail p ]
           (x,y)  = head p
 
--- shapes 
+-- primitives
 circle :: Double -> Double -> Double -> Path
 circle x y r = points'
     where detail = 90 
@@ -83,9 +85,13 @@ circle x y r = points'
 rect :: Double -> Double -> Double -> Double -> Path
 rect x y w h = [(x,y),(x+w,y),(x+w,y+h),(x,y+h),(x,y)]
 
+-- trying to define rect in terms of lines and rotations
+rect' :: Double -> Double -> Double -> Double -> Path
+rect' x y = [origin] -- unfinished
+    where origin = coord x y
+
 line :: Double -> Double -> Double -> Double -> Path
 line x1 y1 x2 y2 = [(x1,y1),(x2,y2)]
-
 
 -- coord maker
 coord :: Double -> Double -> Coord
@@ -160,6 +166,7 @@ gradient (ax,ay) (bx,by) = rise / run
     where rise = by-ay
           run  = bx-ax
 
+-- calculate the of the line between two points relative to ↑
 angle :: Coord -> Coord -> Double
 angle (ax,ay) (bx,by)  = (atan2 rise run) * 180 / pi
     where rise = by-ay
@@ -169,6 +176,7 @@ initialAngle :: Path -> Double
 initialAngle p 
     | length p <= 1 = 0
     | otherwise = angle (head p) (p !! 1)
+
 lastAngle :: Path -> Double
 lastAngle p 
     | length p <= 1 = 0
